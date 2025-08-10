@@ -104,6 +104,9 @@ function PePipeCalculator(){
   const TmaxThin = 1.10 * TminThin + 0.1;
   const TmaxAppD = 1.10 * TminAppD + 0.1;
 
+  // Maximum allowed out of roundness = 2% of nominal OD
+  const maxOutOfRoundness = 0.02 * ODn;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow p-5">
@@ -116,6 +119,10 @@ function PePipeCalculator(){
           <select className="w-full p-2 border rounded" value={od} onChange={(e)=>setOd(e.target.value)}>
             {asnzsODs.map(size => <option key={size} value={size}>{size} mm</option>)}
           </select>
+
+          <label className="block text-sm mt-1 text-gray-600">
+            Max allowed out of roundness (2% of OD): <strong>{fmtNumber(maxOutOfRoundness, 3)} mm</strong>
+          </label>
 
           <label className="block text-sm mt-3">SDR (Standard Dimension Ratio)</label>
           <select className="w-full p-2 border rounded" value={sdr} onChange={(e)=>setSdr(e.target.value)}>
