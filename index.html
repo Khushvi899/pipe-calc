@@ -216,3 +216,221 @@ root.render(<PePipeCalculator />);
 
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0ea5a4" />
+<title>PE Pipe Calculator — AS/NZS 4130</title>
+
+<!-- PWA manifest -->
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<!-- Tailwind Play CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- React + ReactDOM UMD builds -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+<!-- Babel for in-browser JSX transpile (dev only) -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+html, body, #root { height: 100%; margin: 0; -webkit-font-smoothing: antialiased; }
+body { background-color: #f8fafc; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const asnzsODs = [
+  16, 20, 25, 32, 40, 50, 63, 75, 90, 110,
+  125, 140, 160, 180, 200, 225, 250, 280, 315,
+  355, 400, 450, 500, 560, 630, 710, 800, 900,
+  1000, 1120, 1250, 1400, 1600, 1800, 2000
+];
+
+const asnzsSDRs = [
+  41, 33, 26, 21, 17, 13.6, 11, 9
+];
+
+function fmtNumber(v, decimals=3) {
+  const n = Number(v);
+  if (!isFinite(n)) return '0.000';
+  return n.toFixed(decimals);
+}
+
+function calcWallFromSdr(OD, SDR) {
+  if (SDR <= 0) return 0;
+  return OD / SDR;
+}
+
+function calcSdrFromWall(OD, WT) {
+  if (WT <= 0) return 0;
+  return OD / WT;
+}
+
+function computeTmin({ P, Dm, MRS, C, formula }) {
+  const S = MRS / C;
+  if (formula === 'thin') {
+    if (2 * S === 0) return 0;
+    return (P * Dm) / (2 * S);
+  }
+  // App. D guidance style
+  const denom = 2 * S + P;
+  if (denom === 0) return 0;
+  return (P * Dm) / denom;
+}
+
+function PePipeCalculator(){
+  const [od, setOd] = useState('110');
+  const [sdr, setSdr] = useState('11');
+  const [wall, setWall] = useState('10');
+  const [mrs, setMrs] = useState('10');
+  const [c, setC] = useState('1.25');
+  const [p, setP] = useState('1.0');
+  const [formula, setFormula] = useState('thin');
+
+  const ODn = Number(od) || 0;
+  const SDRn = Number(sdr) || 0;
+  const Walln = Number(wall) || 0;
+  const Mrsn = Number(mrs) || 0;
+  const Cn = Number(c) || 1;
+  const Pn = Number(p) || 0;
+
+  // Update wall automatically when OD or SDR changes
+  useEffect(() => {
+    if(ODn > 0 && SDRn > 0){
+      const w = calcWallFromSdr(ODn, SDRn);
+      setWall(w.toFixed(3));
+    }
+  }, [od, sdr]);
+
+  const derivedWallFromSdr = SDRn > 0 ? calcWallFromSdr(ODn, SDRn) : 0;
+  const derivedSdrFromWall = Walln > 0 ? calcSdrFromWall(ODn, Walln) : 0;
+
+  const TminThin = computeTmin({ P: Pn, Dm: ODn, MRS: Mrsn, C: Cn, formula: 'thin' });
+  const TminAppD = computeTmin({ P: Pn, Dm: ODn, MRS: Mrsn, C: Cn, formula: 'asnzs_appd' });
+  const TmaxThin = 1.10 * TminThin + 0.1;
+  const TmaxAppD = 1.10 * TminAppD + 0.1;
+
+  // Maximum allowed out of roundness = 2% of nominal OD
+  const maxOutOfRoundness = 0.02 * ODn;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow p-5">
+        <h1 className="text-lg font-semibold">PE Pipe Calculator — AS/NZS quick-check</h1>
+        <p className="text-xs text-gray-500 mt-1">Quick checks only. For certified design consult AS/NZS 4130 and manufacturer's datasheets.</p>
+
+        <div className="mt-4 space-y-3">
+
+          <label className="block text-sm">Outside diameter (OD) — mm</label>
+          <select className="w-full p-2 border rounded" value={od} onChange={(e)=>setOd(e.target.value)}>
+            {asnzsODs.map(size => <option key={size} value={size}>{size} mm</option>)}
+          </select>
+
+          <label className="block text-sm mt-1 text-gray-600">
+            Max allowed out of roundness (2% of OD): <strong>{fmtNumber(maxOutOfRoundness, 3)} mm</strong>
+          </label>
+
+          <label className="block text-sm mt-3">SDR (Standard Dimension Ratio)</label>
+          <select className="w-full p-2 border rounded" value={sdr} onChange={(e)=>setSdr(e.target.value)}>
+            {asnzsSDRs.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <label className="block text-sm mt-3">Wall thickness — mm</label>
+          <input
+            className="w-full p-2 border rounded"
+            inputMode="decimal"
+            value={wall}
+            onChange={(e)=>setWall(e.target.value)}
+          />
+
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <div>
+              <label className="block text-sm">Material MRS (MPa)</label>
+              <select className="w-full p-2 border rounded" value={mrs} onChange={(e)=>setMrs(e.target.value)}>
+                <option value="10">PE100 — 10 MPa</option>
+                <option value="8">PE80 — 8 MPa</option>
+                <option value="6.3">PE63 — 6.3 MPa</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm">Design coefficient C</label>
+              <input className="w-full p-2 border rounded" value={c} onChange={(e)=>setC(e.target.value)} inputMode="decimal" />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="block text-sm">Design pressure (MPa)</label>
+            <input className="w-full p-2 border rounded" inputMode="decimal" value={p} onChange={(e)=>setP(e.target.value)} />
+          </div>
+
+          <div className="mt-3">
+            <label className="block text-sm">Tmin formula (informative)</label>
+            <select className="w-full p-2 border rounded" value={formula} onChange={(e)=>setFormula(e.target.value)}>
+              <option value="thin">Thin-wall approx: Tmin = P × Dm / (2 × S)</option>
+              <option value="asnzs_appd">App. D guidance style: Tmin ≈ (P × Dm) / (2 × S + P)</option>
+            </select>
+          </div>
+
+          <div className="bg-slate-50 p-3 rounded mt-4">
+            <div className="text-sm">Derived wall from SDR: <strong>{fmtNumber(derivedWallFromSdr)}</strong> mm</div>
+            <div className="text-sm">Derived SDR from wall: <strong>{fmtNumber(derivedSdrFromWall,3)}</strong></div>
+
+            <div className="mt-3 font-semibold">Tmin (thin-wall): {fmtNumber(TminThin)}</div>
+            <div className="text-sm">Tmax (thin-wall): {fmtNumber(TmaxThin)}</div>
+
+            <div className="mt-2 font-semibold">Tmin (App. D guidance): {fmtNumber(TminAppD)}</div>
+            <div className="text-sm">Tmax (App. D guidance): {fmtNumber(TmaxAppD)}</div>
+          </div>
+
+          <div className="flex gap-2 mt-3">
+            <button
+              className="flex-1 p-2 bg-teal-600 text-white rounded"
+              onClick={() => { setWall(calcWallFromSdr(ODn, SDRn).toFixed(3)); }}
+            >
+              Use OD+SDR → Wall
+            </button>
+            <button
+              className="flex-1 p-2 border rounded"
+              onClick={() => { setSdr(calcSdrFromWall(ODn, Walln).toFixed(3)); }}
+            >
+              Use OD+Wall → SDR
+            </button>
+          </div>
+
+          <div className="text-xs text-gray-400 mt-2">Note: This is a quick-check tool and not a replacement for the AS/NZS 4130 standard.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<PePipeCalculator />);
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js').then(function(reg) {
+        console.log('Service Worker registered.', reg);
+      }).catch(function(err) {
+        console.warn('Service Worker registration failed:', err);
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
