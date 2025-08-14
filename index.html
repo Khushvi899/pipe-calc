@@ -3,150 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PE Pipe Calculator (AS/NZS 4130)</title>
+<title>AS/NZS 4130:2018 PE Pipe Dimensions</title>
 <style>
     body {
         font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 15px;
-        background: #f8f9fa;
+        margin: 20px;
+        padding: 0;
+        background: #f9f9f9;
     }
-    h1 {
+    h2 {
         text-align: center;
-        color: #333;
     }
     .container {
-        max-width: 450px;
+        max-width: 500px;
         margin: auto;
-        background: white;
+        background: #fff;
         padding: 20px;
         border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    label {
-        font-weight: bold;
+    label, select {
         display: block;
-        margin-top: 10px;
-    }
-    select, input {
         width: 100%;
-        padding: 8px;
-        margin-top: 5px;
+        margin-bottom: 15px;
         font-size: 16px;
     }
-    button {
-        margin-top: 15px;
-        width: 100%;
-        padding: 10px;
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        font-size: 18px;
+    select {
+        padding: 8px;
     }
     .result {
+        background: #eef;
+        padding: 15px;
+        border-radius: 8px;
         margin-top: 15px;
-        padding: 10px;
-        background: #e9ecef;
-        border-radius: 5px;
+        font-size: 16px;
     }
 </style>
 </head>
 <body>
-    <h1>PE Pipe Calculator</h1>
-    <div class="container">
-        <label for="dn">Select DN (Nominal Size):</label>
-        <select id="dn">
-            <option value="">--Select DN--</option>
-        </select>
-
-        <label for="sdr">Select SDR:</label>
-        <select id="sdr">
-            <option value="">--Select SDR--</option>
-            <option value="7.4">SDR 7.4</option>
-            <option value="9">SDR 9</option>
-            <option value="11">SDR 11</option>
-            <option value="13.6">SDR 13.6</option>
-            <option value="17">SDR 17</option>
-            <option value="21">SDR 21</option>
-            <option value="26">SDR 26</option>
-        </select>
-
-        <button onclick="calculate()">Calculate</button>
-
-        <div class="result" id="result"></div>
-    </div>
+<div class="container">
+    <h2>PE Pipe Dimensions (AS/NZS 4130:2018)</h2>
+    <label for="dnSelect">Select DN Size:</label>
+    <select id="dnSelect">
+        <option value="">-- Select DN --</option>
+    </select>
+    <div id="results" class="result" style="display:none;"></div>
+</div>
 
 <script>
-// AS/NZS 4130 Table 2 Data (DN -> OD + Max Out of Roundness)
-const dnData = [
-    { dn: 16, od: 16.0, oor: 1.2 },
-    { dn: 20, od: 20.0, oor: 1.2 },
-    { dn: 25, od: 25.0, oor: 1.2 },
-    { dn: 32, od: 32.0, oor: 1.3 },
-    { dn: 40, od: 40.0, oor: 1.4 },
-    { dn: 50, od: 50.0, oor: 1.6 },
-    { dn: 63, od: 63.0, oor: 1.5 },
-    { dn: 75, od: 75.0, oor: 1.6 },
-    { dn: 90, od: 90.0, oor: 1.8 },
-    { dn: 110, od: 110.0, oor: 2.2 },
-    { dn: 125, od: 125.0, oor: 2.5 },
-    { dn: 140, od: 140.0, oor: 2.8 },
-    { dn: 160, od: 160.0, oor: 3.2 },
-    { dn: 180, od: 180.0, oor: 3.6 },
-    { dn: 200, od: 200.0, oor: 4.0 },
-    { dn: 225, od: 225.0, oor: 4.5 },
-    { dn: 250, od: 250.0, oor: 5.0 },
-    { dn: 280, od: 280.0, oor: 5.9 },
-    { dn: 315, od: 315.0, oor: 11.1 },
-    { dn: 355, od: 355.0, oor: 12.5 },
-    { dn: 400, od: 400.0, oor: 14.0 },
-    { dn: 450, od: 450.0, oor: 15.6 },
-    { dn: 500, od: 500.0, oor: 17.5 },
-    { dn: 560, od: 560.0, oor: 19.6 },
-    { dn: 630, od: 630.0, oor: 22.1 },
-    { dn: 710, od: 710.0, oor: 24.9 },
-    { dn: 800, od: 800.0, oor: 28.0 },
-    { dn: 900, od: 900.0, oor: 31.5 },
-    { dn: 1000, od: 1000.0, oor: 35.0 },
-    { dn: 1200, od: 1200.0, oor: 42.0 }
-];
-
-// Populate DN dropdown
-const dnSelect = document.getElementById("dn");
-dnData.forEach(item => {
-    const option = document.createElement("option");
-    option.value = item.dn;
-    option.text = `DN ${item.dn} (OD: ${item.od} mm)`;
-    dnSelect.appendChild(option);
-});
-
-function calculate() {
-    const dnValue = document.getElementById("dn").value;
-    const sdrValue = document.getElementById("sdr").value;
-    const resultDiv = document.getElementById("result");
-
-    if (!dnValue || !sdrValue) {
-        resultDiv.innerHTML = "<b>Please select both DN and SDR.</b>";
-        return;
-    }
-
-    const pipe = dnData.find(p => p.dn == dnValue);
-    const od = pipe.od;
-    const oor = pipe.oor;
-    const sdr = parseFloat(sdrValue);
-    const minWall = (od / sdr).toFixed(2);
-    const maxWall = (od / (sdr - 0.4)).toFixed(2); // Example: tolerance
-
-    resultDiv.innerHTML = `
-        <b>Results:</b><br>
-        Outside Diameter (OD): ${od} mm<br>
-        SDR: ${sdr}<br>
-        Minimum Wall Thickness: ${minWall} mm<br>
-        Maximum Wall Thickness (approx): ${maxWall} mm<br>
-        <span style="color:blue">Max Out of Roundness (AS/NZS 4130): ${oor} mm</span>
-    `;
-}
-</script>
-</body>
-</html>
+// AS/NZS 4130 Table 2 values
+const pipeData = [
+    { dn: 16, minOD: 16.0, maxOD: 16.3, minWall: 1.5, maxWall: 1.8, maxOOR: 0.3 },
+    { dn: 20, minOD: 20.0, maxOD: 20.3, minWall: 1.6, maxWall: 2.0, maxOOR: 0.3 },
+    { dn: 25, minOD: 25.0, maxOD: 25.3, minWall: 1.8, maxWall: 2.3, maxOOR: 0.3 },
+    { dn: 32, minOD: 32.0, maxOD: 32.4, minWall: 2.3, maxWall: 2.8, maxOOR: 0.4 },
+    { dn: 40, minOD: 40.0, maxOD: 40.4, minWall: 2.4, maxWall: 3.3, maxOOR: 0.4 },
+    { dn: 50, minOD: 50.0, maxOD: 50.4, minWall: 2.9, maxWall: 4.1, maxOOR: 0.5 },
+    { dn: 63, minOD: 63.0, ma
